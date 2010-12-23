@@ -431,10 +431,10 @@ def configure(conf):
       arch_mappings = {'ia32': 'i386', 'x64': 'x86_64'}
       if arch in arch_mappings:
         arch = arch_mappings[arch]
-      flags = ['-arch', arch]
-      conf.env.append_value('CCFLAGS', flags)
-      conf.env.append_value('CXXFLAGS', flags)
-      conf.env.append_value('LINKFLAGS', flags)
+      #flags = ['-arch', arch]
+      #conf.env.append_value('CCFLAGS', flags)
+      #conf.env.append_value('CXXFLAGS', flags)
+      #conf.env.append_value('LINKFLAGS', flags)
   if 'DEST_CPU' in conf.env:
     arch = conf.env['DEST_CPU']
     # TODO: -m32 is only available on 64 bit machines, so check host type
