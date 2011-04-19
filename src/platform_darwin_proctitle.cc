@@ -31,7 +31,6 @@
 // http://src.chromium.org/viewvc/chrome/trunk/src/base/mac_util.mm
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <Carbon/Carbon.h> // Oh noes! See discussion blow at GetCurrentProcess
 #ifndef NDEBUG
   #include <err.h>
 #endif
@@ -39,108 +38,6 @@
 namespace node {
 
 void Platform::SetProcessTitle(char *title) {
-  static int symbol_lookup_status = 0; // 1=ok, 2=unavailable
-  if (symbol_lookup_status == 2) {
-    // feature is unavailable
-    return;
-  }
-
-  if (process_title) free(process_title);
-  process_title = strdup(title);
-
-  // Warning: here be dragons! This is SPI reverse-engineered from WebKit's
-  // plugin host, and could break at any time (although realistically it's only
-  // likely to break in a new major release).
-  // When 10.7 is available, check that this still works, and update this
-  // comment for 10.8.
-
-  // Private CFType used in these LaunchServices calls.
-  typedef CFTypeRef PrivateLSASN;
-  typedef PrivateLSASN (*LSGetCurrentApplicationASNType)();
-  typedef OSStatus (*LSSetApplicationInformationItemType)(int, PrivateLSASN,
-                                                          CFStringRef,
-                                                          CFStringRef,
-                                                          CFDictionaryRef*);
-
-  static LSGetCurrentApplicationASNType ls_get_current_application_asn_func =
-      NULL;
-  static LSSetApplicationInformationItemType
-      ls_set_application_information_item_func = NULL;
-  static CFStringRef ls_display_name_key = NULL;
-  if (!symbol_lookup_status) {
-    CFBundleRef launch_services_bundle =
-        CFBundleGetBundleWithIdentifier(CFSTR("com.apple.LaunchServices"));
-    if (!launch_services_bundle) {
-#ifndef NDEBUG
-      warnx("failed to look up LaunchServices bundle");
-#endif
-      symbol_lookup_status = 2;
-      return;
-    }
-
-    ls_get_current_application_asn_func =
-        reinterpret_cast<LSGetCurrentApplicationASNType>(
-            CFBundleGetFunctionPointerForName(
-                launch_services_bundle, CFSTR("_LSGetCurrentApplicationASN")));
-    if (!ls_get_current_application_asn_func) {
-#ifndef NDEBUG
-      warnx("could not find _LSGetCurrentApplicationASN");
-#endif
-      symbol_lookup_status = 2;
-      return;
-    }
-
-    ls_set_application_information_item_func =
-        reinterpret_cast<LSSetApplicationInformationItemType>(
-            CFBundleGetFunctionPointerForName(
-                launch_services_bundle,
-                CFSTR("_LSSetApplicationInformationItem")));
-    if (!ls_set_application_information_item_func) {
-#ifndef NDEBUG
-      warnx("Could not find _LSSetApplicationInformationItem");
-#endif
-      symbol_lookup_status = 2;
-      return;
-    }
-
-    const CFStringRef* key_pointer = reinterpret_cast<const CFStringRef*>(
-        CFBundleGetDataPointerForName(launch_services_bundle,
-                                      CFSTR("_kLSDisplayNameKey")));
-    ls_display_name_key = key_pointer ? *key_pointer : NULL;
-    if (!ls_display_name_key) {
-#ifndef NDEBUG
-      warnx("Could not find _kLSDisplayNameKey");
-#endif
-      symbol_lookup_status = 2;
-      return;
-    }
-
-    // Internally, this call relies on the Mach ports that are started up by the
-    // Carbon Process Manager.  In debug builds this usually happens due to how
-    // the logging layers are started up; but in release, it isn't started in as
-    // much of a defined order.  So if the symbols had to be loaded, go ahead
-    // and force a call to make sure the manager has been initialized and hence
-    // the ports are opened.
-    ProcessSerialNumber psn;
-    GetCurrentProcess(&psn);
-    symbol_lookup_status = 1; // 1=ok
-  }
-
-  PrivateLSASN asn = ls_get_current_application_asn_func();
-  // Constant used by WebKit; what exactly it means is unknown.
-  const int magic_session_constant = -2;
-  CFStringRef process_name =
-    CFStringCreateWithCString(NULL, title, kCFStringEncodingUTF8);
-  OSErr err =
-      ls_set_application_information_item_func(magic_session_constant, asn,
-                                               ls_display_name_key,
-                                               process_name,
-                                               NULL /* optional out param */);
-#ifndef NDEBUG
-  if (err) {
-    warnx("Call LSSetApplicationInformationItem failed");
-  }
-#endif
 }
 
 }  // namespace node
