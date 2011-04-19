@@ -186,7 +186,6 @@ void OS::Abort() {
 
 
 void OS::DebugBreak() {
-  asm("int $3");
 }
 
 
@@ -272,9 +271,12 @@ uint64_t OS::CpuFeaturesImpliedByPlatform() {
   // MacOSX requires all these to install so we can assume they are present.
   // These constants are defined by the CPUid instructions.
   const uint64_t one = 1;
-  return (one << SSE2) | (one << CMOV) | (one << RDTSC) | (one << CPUID);
+  return (one << ARMv7) | (one << VFP3);
 }
 
+bool OS::ArmCpuHasFeature(CpuFeature feature) {
+  return (feature == VFP3) || (feature == ARMv7);
+}
 
 int OS::ActivationFrameAlignment() {
   // OS X activation frames must be 16 byte-aligned; see "Mac OS X ABI
@@ -621,49 +623,6 @@ class Sampler::PlatformData : public Malloced {
   }
 
   void Sample() {
-    if (sampler_->IsProfiling()) {
-      TickSample sample_obj;
-      TickSample* sample = CpuProfiler::TickSampleEvent();
-      if (sample == NULL) sample = &sample_obj;
-
-      if (KERN_SUCCESS != thread_suspend(profiled_thread_)) return;
-
-#if V8_HOST_ARCH_X64
-      thread_state_flavor_t flavor = x86_THREAD_STATE64;
-      x86_thread_state64_t state;
-      mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
-#if __DARWIN_UNIX03
-#define REGISTER_FIELD(name) __r ## name
-#else
-#define REGISTER_FIELD(name) r ## name
-#endif  // __DARWIN_UNIX03
-#elif V8_HOST_ARCH_IA32
-      thread_state_flavor_t flavor = i386_THREAD_STATE;
-      i386_thread_state_t state;
-      mach_msg_type_number_t count = i386_THREAD_STATE_COUNT;
-#if __DARWIN_UNIX03
-#define REGISTER_FIELD(name) __e ## name
-#else
-#define REGISTER_FIELD(name) e ## name
-#endif  // __DARWIN_UNIX03
-#else
-#error Unsupported Mac OS X host architecture.
-#endif  // V8_HOST_ARCH
-
-      if (thread_get_state(profiled_thread_,
-                           flavor,
-                           reinterpret_cast<natural_t*>(&state),
-                           &count) == KERN_SUCCESS) {
-        sample->state = Top::current_vm_state();
-        sample->pc = reinterpret_cast<Address>(state.REGISTER_FIELD(ip));
-        sample->sp = reinterpret_cast<Address>(state.REGISTER_FIELD(sp));
-        sample->fp = reinterpret_cast<Address>(state.REGISTER_FIELD(bp));
-        sampler_->SampleStack(sample);
-        sampler_->Tick(sample);
-      }
-      thread_resume(profiled_thread_);
-    }
-    if (RuntimeProfiler::IsEnabled()) RuntimeProfiler::NotifyTick();
   }
 };
 

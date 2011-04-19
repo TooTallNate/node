@@ -32,9 +32,7 @@
 // are not running on real ARM hardware.  One reason for this is that the
 // old ABI uses fp registers in the calling convention and the simulator does
 // not simulate fp registers or coroutine instructions.
-#if defined(__ARM_EABI__) || !defined(__arm__)
-# define USE_ARM_EABI 1
-#endif
+#define USE_ARM_EABI 1
 
 // This means that interwork-compatible jump instructions are generated.  We
 // want to generate them on the simulator too so it makes snapshots that can
