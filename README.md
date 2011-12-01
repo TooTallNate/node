@@ -6,6 +6,7 @@ To build:
     ./configure
     make
     make install
+    ldid -S /usr/bin/node
 
 To run the tests:
 
