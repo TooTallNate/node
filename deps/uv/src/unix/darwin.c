@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include <CoreServices/CoreServices.h>
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <mach-o/dyld.h> /* _NSGetExecutablePath */
@@ -36,10 +35,8 @@
 
 uint64_t uv_hrtime() {
   uint64_t time;
-  Nanoseconds enano;
   time = mach_absolute_time(); 
-  enano = AbsoluteToNanoseconds(*(AbsoluteTime *)&time);
-  return (*(uint64_t *)&enano);
+  return time;
 }
 
 
