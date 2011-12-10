@@ -27,7 +27,11 @@
 
 // CPU specific code for arm independent of OS goes here.
 #ifdef __arm__
-#include <sys/syscall.h>  // for cache flushing.
+#ifdef __APPLE__
+#include <libkern/OSCacheControl.h>
+#else
+#include <sys/syscall.h>
+#endif
 #endif
 
 #include "v8.h"
@@ -57,13 +61,15 @@ void CPU::FlushICache(void* start, size_t size) {
     return;
   }
 
-#if defined (USE_SIMULATOR)
+#if defined(USE_SIMULATOR)
   // Not generating ARM instructions for C-code. This means that we are
   // building an ARM emulator based target.  We should notify the simulator
   // that the Icache was flushed.
   // None of this code ends up in the snapshot so there are no issues
   // around whether or not to generate the code when building snapshots.
   Simulator::FlushICache(Isolate::Current()->simulator_i_cache(), start, size);
+#elif defined(__APPLE__)
+  sys_icache_invalidate(start, size);
 #else
   // Ideally, we would call
   //   syscall(__ARM_NR_cacheflush, start,
