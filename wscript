@@ -441,8 +441,6 @@ def configure(conf):
     conf.env.append_value ('CXXFLAGS', threadflags)
     conf.env.append_value ('LINKFLAGS', threadflags)
   if sys.platform.startswith("darwin"):
-    # used by platform_darwin_*.cc
-    conf.env.append_value('LINKFLAGS', ['-framework','Carbon'])
     # cross compile for architecture specified by DEST_CPU
     if 'DEST_CPU' in conf.env:
       arch = conf.env['DEST_CPU']
@@ -450,7 +448,7 @@ def configure(conf):
       arch_mappings = {'ia32': 'i386', 'x64': 'x86_64'}
       if arch in arch_mappings:
         arch = arch_mappings[arch]
-      flags = ['-arch', arch]
+      flags = []
       conf.env.append_value('CCFLAGS', flags)
       conf.env.append_value('CXXFLAGS', flags)
       conf.env.append_value('LINKFLAGS', flags)
