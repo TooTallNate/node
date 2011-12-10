@@ -29,9 +29,7 @@
 #define V8_ARM_CONSTANTS_ARM_H_
 
 // ARM EABI is required.
-#if defined(__arm__) && !defined(__ARM_EABI__)
-#error ARM EABI support is required.
-#endif
+#define USE_ARM_EABI 1
 
 // This means that interwork-compatible jump instructions are generated.  We
 // want to generate them on the simulator too so it makes snapshots that can

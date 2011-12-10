@@ -35,11 +35,29 @@
 namespace v8 {
 namespace internal {
 
+
+#ifdef __APPLE__
+#include <libkern/OSAtomic.h>
+
+inline bool KernelCompareAndSwap(Atomic32 old_value,
+                                 Atomic32 new_value,
+                                 volatile Atomic32* ptr) {
+  return OSAtomicCompareAndSwap32Barrier(old_value,
+                                         new_value,
+                                         ptr);
+}
+
+
+inline void KernelMemoryBarrier() {
+  OSMemoryBarrier();
+}
+#else
 // 0xffff0fc0 is the hard coded address of a function provided by
 // the kernel which implements an atomic compare-exchange. On older
 // ARM architecture revisions (pre-v6) this may be implemented using
 // a syscall. This address is stable, and in active use (hard coded)
 // by at least glibc-2.7 and the Android C library.
+// Returns zero on success.
 typedef Atomic32 (*LinuxKernelCmpxchgFunc)(Atomic32 old_value,
                                            Atomic32 new_value,
                                            volatile Atomic32* ptr);
@@ -51,13 +69,25 @@ LinuxKernelMemoryBarrierFunc pLinuxKernelMemoryBarrier __attribute__((weak)) =
     (LinuxKernelMemoryBarrierFunc) 0xffff0fa0;
 
 
+inline bool KernelCompareAndSwap(Atomic32 old_value,
+                                 Atomic32 new_value,
+                                 volatile Atomic32* ptr) {
+  return pLinuxKernelCmpxchg(old_value, new_value, ptr) == 0;
+}
+
+
+inline void KernelMemoryBarrier() {
+  pLinuxKernelMemoryBarrier();
+}
+#endif
+
+
 inline Atomic32 NoBarrier_CompareAndSwap(volatile Atomic32* ptr,
                                          Atomic32 old_value,
                                          Atomic32 new_value) {
   Atomic32 prev_value = *ptr;
   do {
-    if (!pLinuxKernelCmpxchg(old_value, new_value,
-                             const_cast<Atomic32*>(ptr))) {
+    if (KernelCompareAndSwap(old_value, new_value, ptr)) {
       return old_value;
     }
     prev_value = *ptr;
@@ -70,8 +100,7 @@ inline Atomic32 NoBarrier_AtomicExchange(volatile Atomic32* ptr,
   Atomic32 old_value;
   do {
     old_value = *ptr;
-  } while (pLinuxKernelCmpxchg(old_value, new_value,
-                               const_cast<Atomic32*>(ptr)));
+  } while (!KernelCompareAndSwap(old_value, new_value, ptr));
   return old_value;
 }
 
@@ -86,8 +115,7 @@ inline Atomic32 Barrier_AtomicIncrement(volatile Atomic32* ptr,
     // Atomic exchange the old value with an incremented one.
     Atomic32 old_value = *ptr;
     Atomic32 new_value = old_value + increment;
-    if (pLinuxKernelCmpxchg(old_value, new_value,
-                            const_cast<Atomic32*>(ptr)) == 0) {
+    if (KernelCompareAndSwap(old_value, new_value, ptr)) {
       // The exchange took place as expected.
       return new_value;
     }
@@ -112,7 +140,7 @@ inline void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value) {
 }
 
 inline void MemoryBarrier() {
-  pLinuxKernelMemoryBarrier();
+  KernelMemoryBarrier();
 }
 
 inline void Acquire_Store(volatile Atomic32* ptr, Atomic32 value) {
