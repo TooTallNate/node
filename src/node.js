@@ -121,7 +121,12 @@
       // If -i or --interactive were passed, or stdin is a TTY.
       if (process._forceRepl || NativeModule.require('tty').isatty(0)) {
         // REPL
-        var repl = Module.requireRepl().start('> ', null, null, true);
+        var repl = Module.requireRepl().start({
+          prompt: '> ',
+          enabled: true,
+          useGlobal: true,
+          ignoreUndefined: false
+        });
         repl.on('exit', function() {
           process.exit();
         });
