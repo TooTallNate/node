@@ -123,7 +123,7 @@
         // REPL
         var repl = Module.requireRepl().start({
           prompt: '> ',
-          enabled: true,
+          enabled: !parseInt(process.env['NODE_NO_READLINE'], 10),
           useGlobal: true,
           ignoreUndefined: false
         });
