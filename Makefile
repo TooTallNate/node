@@ -23,7 +23,7 @@ node_g: config.gypi
 	$(MAKE) -C out BUILDTYPE=Debug
 	ln -fs out/Debug/node node_g
 
-config.gypi: configure
+config.gypi:
 	./configure
 
 out/Debug/node:
