@@ -325,6 +325,11 @@
         er = er || new Error('process.stdout cannot be closed.');
         stdout.emit('error', er);
       };
+      if (stdout.isTTY) {
+        process.on('SIGWINCH', function() {
+          stdout.refreshSize();
+        });
+      }
       return stdout;
     });
 
