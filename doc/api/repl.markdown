@@ -43,7 +43,7 @@ takes the following values:
  - `socket` - an alias for `stream` (but `stream` takes precedence if both are
    present).
 
- - `enabled` - pass `true` if the `stream` should be treated like a TTY, and
+ - `terminal` - pass `true` if the `stream` should be treated like a TTY, and
    have ANSI/VT100 escape codes written to it. Defaults to checking `isTTY`
    on the `output` stream upon instantiation.
 
@@ -105,7 +105,7 @@ TCP sockets.
 By starting a REPL from a Unix socket-based server instead of stdin, you can
 connect to a long-running node process without restarting it.
 
-For an example of running a "full-featured" (`enabled`) REPL over
+For an example of running a "full-featured" (`terminal`) REPL over
 a `net.Server` and `net.Socket` instance, see: https://gist.github.com/2209310
 
 For an example of running a REPL instance over `curl(1)`,

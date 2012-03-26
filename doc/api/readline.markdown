@@ -35,7 +35,7 @@ the following values:
  - `completer` - an optional function that is used for Tab autocompletion. See
    below for an example of using this.
 
- - `enabled` - pass `true` if the `input` and `output` streams should be treated
+ - `terminal` - pass `true` if the `input` and `output` streams should be treated
    like a TTY, and have ANSI/VT100 escape codes written to it. Defaults to
    checking `isTTY` on the `output` stream upon instantiation.
 
@@ -66,7 +66,7 @@ Also `completer` can be run in async mode if it accepts two arguments:
 
 Once you have a readline instance, you most commonly listen for the `"line"` event.
 
-If `enabled` is `true` for this instance then the `output` stream will get the
+If `terminal` is `true` for this instance then the `output` stream will get the
 best compatability if it defines an `output.columns` property, and fires
 a `"resize"` event on the `output` if/when the columns ever change
 (`process.stdout` does this automatically when it is a TTY).
