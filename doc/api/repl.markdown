@@ -29,19 +29,16 @@ For example, you could add this to your bashrc file:
 
 
 ## repl.start(options)
-## repl.start([prompt], [stream], [eval], [useGlobal], [ignoreUndefined])
 
 Returns and starts a `REPLServer` instance. Accepts an "options" Object that
 takes the following values:
 
  - `prompt` - the prompt and `stream` for all I/O. Defaults to `> `.
 
- - `stream` - either a duplex stream instance (like a `net.Socket`) or an
-   Object that contains both `stdin` and `stdout` properties (like `process`, or
-   any custom made one). Defaults to `process`.
+ - `input` - the readable stream to listen to. Defaults to `process.stdin`.
 
- - `socket` - an alias for `stream` (but `stream` takes precedence if both are
-   present).
+ - `output` - the writable stream to write readline data to. Defaults to
+   `process.stdout`.
 
  - `terminal` - pass `true` if the `stream` should be treated like a TTY, and
    have ANSI/VT100 escape codes written to it. Defaults to checking `isTTY`
@@ -74,14 +71,16 @@ Here is an example that starts a REPL on stdin, a Unix socket, and a TCP socket:
 
     repl.start({
       prompt: "node via stdin> ",
-      stream: process
+      input: process.stdin,
+      output: process.stdout
     });
 
     net.createServer(function (socket) {
       connections += 1;
       repl.start({
         prompt: "node via Unix socket> ",
-        socket: socket
+        input: socket,
+        output: socket
       }).on('exit', function() {
         socket.end();
       })
@@ -91,7 +90,8 @@ Here is an example that starts a REPL on stdin, a Unix socket, and a TCP socket:
       connections += 1;
       repl.start({
         prompt: "node via TCP socket> ",
-        socket: socket
+        input: socket,
+        output: socket
       }).on('exit', function() {
         socket.end();
       });
