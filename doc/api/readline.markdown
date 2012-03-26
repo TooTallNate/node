@@ -58,7 +58,7 @@ Also `completer` can be run in async mode if it accepts two arguments:
 `createInterface` is commonly used with `process.stdin` and
 `process.stdout` in order to accept user input:
 
-    var readline = require('readline'),
+    var readline = require('readline');
     var rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
