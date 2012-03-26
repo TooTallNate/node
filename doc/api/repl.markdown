@@ -105,7 +105,7 @@ TCP sockets.
 By starting a REPL from a Unix socket-based server instead of stdin, you can
 connect to a long-running node process without restarting it.
 
-For an example of running a "full-featured" (`enabled` and `useColors`) REPL over
+For an example of running a "full-featured" (`enabled`) REPL over
 a `net.Server` and `net.Socket` instance, see: https://gist.github.com/2209310
 
 For an example of running a REPL instance over `curl(1)`,
