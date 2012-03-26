@@ -61,17 +61,6 @@ gets updated on "resize" events.
 A `Number` that gives the number of rows the TTY currently has. This property
 gets updated on "resize" events.
 
-
-### ws.refreshSize()
-
-Calls the internal "getWindowSize()" function and updates the `columns` and
-`rows` properties if they have changed. If either value has changed, then a
-"resize" event will be emitted.
-
-Usually won't be called by your program, but should be called when some external
-notification of the window size changing has occured. For example, node
-automatically calls this on `process.stdout` when the "SIGWINCH" event happens
-
 ### Event: 'resize'
 
 `function () {}`

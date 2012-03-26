@@ -327,7 +327,7 @@
       };
       if (stdout.isTTY) {
         process.on('SIGWINCH', function() {
-          stdout.refreshSize();
+          stdout._refreshSize();
         });
       }
       return stdout;
