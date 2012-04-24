@@ -2209,6 +2209,10 @@ Handle<Object> SetupProcessObject(int argc, char *argv[]) {
   // -e, --eval
   if (eval_string) {
     process->Set(String::NewSymbol("_eval"), String::New(eval_string));
+  }
+
+  // -p, --print
+  if (print_eval) {
     process->Set(String::NewSymbol("_print_eval"), Boolean::New(print_eval));
   }
 
