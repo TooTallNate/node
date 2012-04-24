@@ -2216,6 +2216,7 @@ Handle<Object> SetupProcessObject(int argc, char *argv[]) {
     process->Set(String::NewSymbol("_print_eval"), Boolean::New(print_eval));
   }
 
+  // -i, --interactive
   if (force_repl) {
     process->Set(String::NewSymbol("_forceRepl"), True());
   }
