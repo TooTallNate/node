@@ -49,4 +49,5 @@ n.on('exit', function(c) {
 
 process.on('exit', function() {
   assert.ok(childExitCode == 0);
+  assert.ok(messageCount == 1);
 });
