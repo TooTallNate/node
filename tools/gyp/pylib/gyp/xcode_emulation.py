@@ -313,24 +313,6 @@ class XcodeSettings(object):
     self._WarnUnimplemented('MACH_O_TYPE')
     self._WarnUnimplemented('PRODUCT_TYPE')
 
-    archs = self._Settings().get('ARCHS', ['i386'])
-    if len(archs) != 1:
-      # TODO: Supporting fat binaries will be annoying.
-      self._WarnUnimplemented('ARCHS')
-      archs = ['i386']
-    cflags.append('-arch ' + archs[0])
-
-    if archs[0] in ('i386', 'x86_64'):
-      if self._Test('GCC_ENABLE_SSE3_EXTENSIONS', 'YES', default='NO'):
-        cflags.append('-msse3')
-      if self._Test('GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS', 'YES',
-                    default='NO'):
-        cflags.append('-mssse3')  # Note 3rd 's'.
-      if self._Test('GCC_ENABLE_SSE41_EXTENSIONS', 'YES', default='NO'):
-        cflags.append('-msse4.1')
-      if self._Test('GCC_ENABLE_SSE42_EXTENSIONS', 'YES', default='NO'):
-        cflags.append('-msse4.2')
-
     cflags += self._Settings().get('WARNING_CFLAGS', [])
 
     config = self.spec['configurations'][self.configname]
@@ -536,13 +518,6 @@ class XcodeSettings(object):
       ldflags.append('-Wl,-order_file ' +
                      '-Wl,' + gyp_to_build_path(
                                   self._Settings()['ORDER_FILE']))
-
-    archs = self._Settings().get('ARCHS', ['i386'])
-    if len(archs) != 1:
-      # TODO: Supporting fat binaries will be annoying.
-      self._WarnUnimplemented('ARCHS')
-      archs = ['i386']
-    ldflags.append('-arch ' + archs[0])
 
     # Xcode adds the product directory by default.
     ldflags.append('-L' + product_dir)
