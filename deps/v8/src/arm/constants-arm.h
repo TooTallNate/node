@@ -30,7 +30,11 @@
 
 // ARM EABI is required.
 #if defined(__arm__) && !defined(__ARM_EABI__)
+#if __APPLE__
+#define USE_ARM_EABI 1
+#else
 #error ARM EABI support is required.
+#endif
 #endif
 
 // This means that interwork-compatible jump instructions are generated.  We

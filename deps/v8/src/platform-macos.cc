@@ -178,7 +178,14 @@ void OS::Abort() {
 
 
 void OS::DebugBreak() {
-  asm("int $3");
+#if (defined(__arm__) || defined(__thumb__))
+# if defined(CAN_USE_ARMV5_INSTRUCTIONS)
+  asm("bkpt 0");
+# endif
+  UNIMPLEMENTED();
+#else
+   asm("int $3");
+#endif
 }
 
 
@@ -273,7 +280,18 @@ uint64_t OS::CpuFeaturesImpliedByPlatform() {
   // MacOSX requires all these to install so we can assume they are present.
   // These constants are defined by the CPUid instructions.
   const uint64_t one = 1;
-  return (one << SSE2) | (one << CMOV) | (one << RDTSC) | (one << CPUID);
+#if defined(V8_HOST_ARCH_ARM)
+  return (one << ARMv7) | (one << VFP3);
+#elif defined(V8_HOST_ARCH_IA32) || defined(V8_HOST_ARCH_X64)
+   return (one << SSE2) | (one << CMOV) | (one << RDTSC) | (one << CPUID);
+#else
+#error "Mac OS is not supported on your platform"
+#endif
+}
+
+
+bool OS::ArmCpuHasFeature(CpuFeature feature) {
+  return (feature == VFP3) || (feature == ARMv7);
 }
 
 
@@ -815,24 +833,33 @@ class SamplerThread : public Thread {
 
     if (KERN_SUCCESS != thread_suspend(profiled_thread)) return;
 
+#if __DARWIN_UNIX03
+#define GET_REG(state, name) reinterpret_cast<Address>(state.__##name)
+#else
+#define GET_REG(state, name) reinterpret_cast<Address>(state.name)
+#endif
+
 #if V8_HOST_ARCH_X64
     thread_state_flavor_t flavor = x86_THREAD_STATE64;
     x86_thread_state64_t state;
     mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
-#if __DARWIN_UNIX03
-#define REGISTER_FIELD(name) __r ## name
-#else
-#define REGISTER_FIELD(name) r ## name
-#endif  // __DARWIN_UNIX03
+#define GET_SP(state) GET_REG(state, rsp)
+#define GET_FP(state) GET_REG(state, rbp)
+#define GET_PC(state) GET_REG(state, rip)
 #elif V8_HOST_ARCH_IA32
     thread_state_flavor_t flavor = i386_THREAD_STATE;
     i386_thread_state_t state;
     mach_msg_type_number_t count = i386_THREAD_STATE_COUNT;
-#if __DARWIN_UNIX03
-#define REGISTER_FIELD(name) __e ## name
-#else
-#define REGISTER_FIELD(name) e ## name
-#endif  // __DARWIN_UNIX03
+#define GET_SP(state) GET_REG(state, esp)
+#define GET_FP(state) GET_REG(state, ebp)
+#define GET_PC(state) GET_REG(state, eip)
+#elif V8_HOST_ARCH_ARM
+    thread_state_flavor_t flavor = ARM_THREAD_STATE;
+    arm_thread_state_t state;
+    mach_msg_type_number_t count = ARM_THREAD_STATE_COUNT;
+#define GET_SP(state) GET_REG(state, sp)
+#define GET_FP(state) GET_REG(state, r[11])
+#define GET_PC(state) GET_REG(state, pc)
 #else
 #error Unsupported Mac OS X host architecture.
 #endif  // V8_HOST_ARCH
@@ -842,9 +869,9 @@ class SamplerThread : public Thread {
                          reinterpret_cast<natural_t*>(&state),
                          &count) == KERN_SUCCESS) {
       sample->state = sampler->isolate()->current_vm_state();
-      sample->pc = reinterpret_cast<Address>(state.REGISTER_FIELD(ip));
-      sample->sp = reinterpret_cast<Address>(state.REGISTER_FIELD(sp));
-      sample->fp = reinterpret_cast<Address>(state.REGISTER_FIELD(bp));
+      sample->pc = GET_PC(state);
+      sample->sp = GET_SP(state);
+      sample->fp = GET_FP(state);
       sampler->SampleStack(sample);
       sampler->Tick(sample);
     }
