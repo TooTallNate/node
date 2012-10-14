@@ -100,6 +100,7 @@ via `util.inspect.styles` and `util.inspect.colors` objects.
 `util.inspect.styles` is a map assigning each style a color
 from `util.inspect.colors`.
 Highlighted styles and their default values are:
+
  * `number` (yellow)
  * `boolean` (yellow)
  * `string` (green)
@@ -114,13 +115,17 @@ Predefined color codes are: `white`, `grey`, `black`, `blue`, `cyan`,
 `green`, `magenta`, `red` and `yellow`.
 There are also `bold`, `italic`, `underline` and `inverse` codes.
 
-Objects also may define their own `inspect(depth)` function which `util.inspect()`
-will invoke and use the result of when inspecting the object:
+### Custom `inspect()` output for objects
+
+Objects also may define their own `inspect(options)` function which
+`util.inspect()` will invoke and use the result of when inspecting
+the object. The function gets passed the `options` objects that
+specifies the options used:
 
     var util = require('util');
 
     var obj = { name: 'nate' };
-    obj.inspect = function(depth) {
+    obj.inspect = function(options) {
       return '{' + this.name + '}';
     };
 

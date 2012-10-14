@@ -157,3 +157,18 @@ assert(util.inspect(subject, { customInspect: true }).indexOf('123') !== -1);
 assert(util.inspect(subject, { customInspect: true }).indexOf('inspect') === -1);
 assert(util.inspect(subject, { customInspect: false }).indexOf('123') === -1);
 assert(util.inspect(subject, { customInspect: false }).indexOf('inspect') !== -1);
+
+// custom "inspect()" functions get the options object
+subject = {};
+subject.a = {};
+subject.a.b = {};
+subject.a.b.foo = 'bar';
+subject.a.b.inspect = function(options) {
+  if (options.depth === -1) { return '[Obj]'; }
+  return JSON.stringify(options);
+};
+
+//assert(util.inspect(subject, { colors: true }).indexOf());
+console.log(util.inspect(subject, { colors: true, depth: 2 }));
+console.log(util.inspect(subject, { depth: 1 }));
+console.log(util.inspect(subject, { depth: 0 }));
