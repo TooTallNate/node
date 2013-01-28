@@ -427,7 +427,7 @@ and `_write(chunk, callback)` methods as you would with a Readable or
 Writable stream class.
 
 Since JavaScript doesn't have multiple prototypal inheritance, this
-class prototypally inherits from Readable, and then parasitically from
+class prototypically inherits from Readable, and then parasitically from
 Writable.  It is thus up to the user to implement both the lowlevel
 `_read(n,cb)` method as well as the lowlevel `_write(chunk,cb)` method
 on extension duplex classes.
