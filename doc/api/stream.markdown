@@ -432,13 +432,17 @@ Writable.  It is thus up to the user to implement both the lowlevel
 `_read(n,cb)` method as well as the lowlevel `_write(chunk,cb)` method
 on extension duplex classes.
 
-### new stream.Duplex(options)
+### new stream.Duplex([options], [readableOptions])
 
-* `options` {Object} Passed to both Writable and Readable
-  constructors. Also has the following fields:
+* `options` {Object} Passed to the Writable constructor. If no `readableOptions`
+  object is passed in, then it is passed to the Readable constructor as well.
+  Also has the following fields:
   * `allowHalfOpen` {Boolean} Default=true.  If set to `false`, then
     the stream will automatically end the readable side when the
     writable side ends and vice versa.
+* `readableOptions` {Object} Optional options object to be passed to the Writable
+  constructor. Useful for when the Readable and Writable sides require different
+  options.
 
 In classes that extend the Duplex class, make sure to call the
 constructor so that the buffering settings can be properly
@@ -460,10 +464,17 @@ Rather than implement the `_read()` and `_write()` methods, Transform
 classes must implement the `_transform()` method, and may optionally
 also implement the `_flush()` method.  (See below.)
 
-### new stream.Transform([options])
+### new stream.Transform([options], [readableOptions])
 
-* `options` {Object} Passed to both Writable and Readable
-  constructors.
+* `options` {Object} Passed to the Writable constructor. If no `readableOptions`
+  object is passed in, then it is passed to the Readable constructor as well.
+  Also has the following fields:
+  * `allowHalfOpen` {Boolean} Default=true.  If set to `false`, then
+    the stream will automatically end the readable side when the
+    writable side ends and vice versa.
+* `readableOptions` {Object} Optional options object to be passed to the Writable
+  constructor. Useful for when the Readable and Writable sides require different
+  options.
 
 In classes that extend the Transform class, make sure to call the
 constructor so that the buffering settings can be properly
