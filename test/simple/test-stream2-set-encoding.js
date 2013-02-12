@@ -312,3 +312,39 @@ test('encoding: hex with read(13)', function(t) {
   // just kick it off.
   tr.emit('readable');
 });
+
+test('encoding: without an end() function', function(t) {
+  var tr = new TestReader(100);
+  tr.setEncoding('utf8');
+
+  // remove the end() function. this emulates node <= v0.8.x, where
+  // .end() was not yet implemented.
+  tr._readableState.decoder.end = null;
+
+  var out = [];
+  var expect =
+    [ 'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa',
+      'aaaaaaaaaa' ];
+
+  tr.on('readable', function flow() {
+    var chunk;
+    while (null !== (chunk = tr.read(10)))
+      out.push(chunk);
+  });
+
+  tr.on('end', function() {
+    t.same(out, expect);
+    t.end();
+  });
+
+  // just kick it off.
+  tr.emit('readable');
+});
