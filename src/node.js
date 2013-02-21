@@ -156,8 +156,6 @@
         });
       }
     }
-
-    process._needTickCallback();
   }
 
   startup.globalVariables = function() {
@@ -167,8 +165,6 @@
     global.root = global;
     global.Buffer = NativeModule.require('buffer').Buffer;
     process.binding('buffer').setFastBufferConstructor(global.Buffer);
-    process.domain = null;
-    process._exiting = false;
   };
 
   startup.globalTimeouts = function() {
@@ -266,17 +262,11 @@
       // since that means that we'll exit the process, emit the 'exit' event
       if (!caught) {
         try {
-          if (!process._exiting) {
-            process._exiting = true;
-            process.emit('exit', 1);
-          }
+          process.emit('exit', 1);
         } catch (er) {
           // nothing to be done about it at this point.
         }
       }
-      // if we handled an error, then make sure any ticks get processed
-      if (caught)
-        process._needTickCallback();
       return caught;
     };
   };
@@ -307,27 +297,10 @@
   };
 
   startup.processNextTick = function() {
-    var _needTickCallback = process._needTickCallback;
     var nextTickQueue = [];
-    var usingDomains = false;
-    var needSpinner = true;
+    var nextTickIndex = 0;
     var inTick = false;
-
-    // this infobox thing is used so that the C++ code in src/node.cc
-    // can have easy accesss to our nextTick state, and avoid unnecessary
-    // calls into process._tickCallback.
-    // order is [length, index, depth]
-    // Never write code like this without very good reason!
-    var infoBox = process._tickInfoBox;
-    var length = 0;
-    var index = 1;
-    var depth = 2;
-
-    process._tickCallback = _tickCallback;
-    process._tickFromSpinner = _tickFromSpinner;
-    // needs to be accessible from cc land
-    process._tickDomainCallback = _tickDomainCallback;
-    process.nextTick = nextTick;
+    var tickDepth = 0;
 
     // the maximum number of times it'll process something like
     // nextTick(function f(){nextTick(f)})
@@ -339,22 +312,13 @@
     process.maxTickDepth = 1000;
 
     function tickDone(tickDepth_) {
-      if (infoBox[length] !== 0) {
-        if (infoBox[length] <= infoBox[index]) {
-          nextTickQueue = [];
-          infoBox[length] = 0;
-        } else {
-          nextTickQueue.splice(0, infoBox[index]);
-          infoBox[length] = nextTickQueue.length;
-          if (needSpinner) {
-            _needTickCallback();
-            needSpinner = false;
-          }
-        }
-      }
+      tickDepth = tickDepth_ || 0;
+      nextTickQueue.splice(0, nextTickIndex);
+      nextTickIndex = 0;
       inTick = false;
-      infoBox[index] = 0;
-      infoBox[depth] = tickDepth_;
+      if (nextTickQueue.length) {
+        process._needTickCallback();
+      }
     }
 
     function maxTickWarn() {
@@ -368,64 +332,26 @@
         console.error(msg);
     }
 
-    function _tickFromSpinner() {
-      needSpinner = true;
-      // coming from spinner, reset!
-      if (infoBox[depth] !== 0)
-        infoBox[depth] = 0;
-      // no callbacks to run
-      if (infoBox[length] === 0)
-        return infoBox[index] = infoBox[depth] = 0;
-      if (nextTickQueue[infoBox[length] - 1].domain)
-        _tickDomainCallback();
-      else
-        _tickCallback();
-    }
-
-    // run callbacks that have no domain
-    // using domains will cause this to be overridden
-    function _tickCallback() {
-      var callback, nextTickLength, threw;
-
-      if (inTick) return;
-      if (infoBox[length] === 0) {
-        infoBox[index] = 0;
-        infoBox[depth] = 0;
-        return;
-      }
-      inTick = true;
-
-      while (infoBox[depth]++ < process.maxTickDepth) {
-        nextTickLength = infoBox[length];
-        if (infoBox[index] === nextTickLength)
-          return tickDone(0);
-
-        while (infoBox[index] < nextTickLength) {
-          callback = nextTickQueue[infoBox[index]++].callback;
-          threw = true;
-          try {
-            callback();
-            threw = false;
-          } finally {
-            if (threw) tickDone(infoBox[depth]);
-          }
-        }
-      }
-
-      tickDone(0);
-    }
-
-    function _tickDomainCallback() {
-      var nextTickLength, tock, callback, threw;
-
+    process._tickCallback = function(fromSpinner) {
       // if you add a nextTick in a domain's error handler, then
       // it's possible to cycle indefinitely.  Normally, the tickDone
       // in the finally{} block below will prevent this, however if
       // that error handler ALSO triggers multiple MakeCallbacks, then
       // it'll try to keep clearing the queue, since the finally block
       // fires *before* the error hits the top level and is handled.
-      if (infoBox[depth] >= process.maxTickDepth)
-        return _needTickCallback();
+      if (tickDepth >= process.maxTickDepth) {
+        if (fromSpinner) {
+          // coming in from the event queue.  reset.
+          tickDepth = 0;
+        } else {
+          if (nextTickQueue.length) {
+            process._needTickCallback();
+          }
+          return;
+        }
+      }
+
+      if (!nextTickQueue.length) return tickDone();
 
       if (inTick) return;
       inTick = true;
@@ -434,19 +360,18 @@
       // is set to some negative value, or if there were repeated errors
       // preventing depth from being cleared, we'd never process any
       // of them.
-      while (infoBox[depth]++ < process.maxTickDepth) {
-        nextTickLength = infoBox[length];
-        if (infoBox[index] === nextTickLength)
-          return tickDone(0);
-
-        while (infoBox[index] < nextTickLength) {
-          tock = nextTickQueue[infoBox[index]++];
-          callback = tock.callback;
+      do {
+        tickDepth++;
+        var nextTickLength = nextTickQueue.length;
+        if (nextTickLength === 0) return tickDone();
+        while (nextTickIndex < nextTickLength) {
+          var tock = nextTickQueue[nextTickIndex++];
+          var callback = tock.callback;
           if (tock.domain) {
             if (tock.domain._disposed) continue;
             tock.domain.enter();
           }
-          threw = true;
+          var threw = true;
           try {
             callback();
             threw = false;
@@ -459,31 +384,31 @@
             tock.domain.exit();
           }
         }
-      }
+        nextTickQueue.splice(0, nextTickIndex);
+        nextTickIndex = 0;
 
-      tickDone(0);
-    }
+        // continue until the max depth or we run out of tocks.
+      } while (tickDepth < process.maxTickDepth &&
+               nextTickQueue.length > 0);
 
-    function nextTick(callback) {
-      // on the way out, don't bother. it won't get fired anyway.
-      if (process._exiting)
-        return;
-      if (infoBox[depth] >= process.maxTickDepth)
+      tickDone();
+    };
+
+    process.nextTick = function(callback) {
+      // on the way out, don't bother.
+      // it won't get fired anyway.
+      if (process._exiting) return;
+
+      if (tickDepth >= process.maxTickDepth)
         maxTickWarn();
 
-      var obj = { callback: callback };
-      if (process.domain !== null) {
-        obj.domain = process.domain;
-        // user has opt'd to use domains, so override default functionality
-        if (!usingDomains) {
-          process._tickCallback = _tickDomainCallback;
-          usingDomains = true;
-        }
+      var tock = { callback: callback };
+      if (process.domain) tock.domain = process.domain;
+      nextTickQueue.push(tock);
+      if (nextTickQueue.length) {
+        process._needTickCallback();
       }
-
-      nextTickQueue.push(obj);
-      infoBox[length]++;
-    }
+    };
   };
 
   function evalScript(name) {
